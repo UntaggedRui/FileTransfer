@@ -43,20 +43,55 @@ void handle_quit()
     printf("关闭成功\n");
     exit(1);
 }
+
+// 传过来的是路径，我们只要最后的文件名。
+void getfilename(char *filepath, char *filename)
+{
+    int i, pos=0,start=0;
+    // 找到最后一个/，把后面的字符拷贝下来
+    for(i=0;filepath[i]!='\0';++i)
+    {
+        if(filepath[i]=='/')
+        {
+            pos = i;
+        }
+    }
+
+    // 如果pos不是0，他就是/,要跳过。如果没有/就不用跳过。
+    if(pos!=0)
+    {
+        i = pos+1;
+    }
+    else
+    {
+        i = pos;
+    }
+    for(start=0;filepath[i]!='\0';++i,++start)
+    {
+        filename[start] = filepath[i];
+    }
+    filename[start] = '\0';
+
+}
 void handle_connection_at_server(Para *para, int sockfd)
 {
     char msg[1024];
     Thread_ctx *thread_ctx;
     int i;
-    char filename[256];
+    char recv_filepath[256], filename[256];
+    char tmp_path[512];
     size_t each_thread_size;
     read(sockfd, msg, 1024);
     // 接收到的是文件名:文件大小:线程数
     printf("msg is %s\n", msg);
-    sscanf(msg, "%zu:%d:%s", &para->filesize, &para->threads, filename);
-    printf("file name is %s, size is %zu, threads is %d\n", filename, para->filesize, para->threads);
-    para->filepath = strdup(filename);
-    strcat(para->filepath, "recv");
+    sscanf(msg, "%zu:%d:%s", &para->filesize, &para->threads, recv_filepath);
+    getfilename(recv_filepath, filename);
+
+    printf("file path is %s, filename is %s, size is %zu, threads is %d\n", recv_filepath, filename, para->filesize, para->threads);
+    sprintf(tmp_path, "%s%s%s", BASE_DIR, filename, "recv" );
+    // strcat(para->filepath, "recv");
+    para->filepath = strdup(tmp_path);
+    printf("para->filepath is %s\n", para->filepath);
     close(sockfd);
 
     thread_ctx = (Thread_ctx *)malloc(para->threads * sizeof(Thread_ctx));
