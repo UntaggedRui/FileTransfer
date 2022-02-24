@@ -49,10 +49,19 @@ typedef struct Thread_ctx
     int packetsize;
     size_t start;
     size_t end;
+    size_t count; // for monitor
 
 } Thread_ctx;
+
+typedef struct Monitor_ctx
+{
+    Thread_ctx *thread_ctx;
+    int threads;
+    int run;
+}Monitor_ctx;
 
 int parse_args(Para *para, int argc, char *argv[]);
 __off_t getfilesize(char *filename);
 int setfilesize(int fd, __off_t size);
 void pin_1thread_to_1core(int core_id);
+void *monitor_throughput(void *Monitor_ctx);

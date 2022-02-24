@@ -102,3 +102,26 @@ void pin_1thread_to_1core(int core_id)
     // if (s != 0)
     //     fprintf(stderr, "pthread_getaffinity_np:%d", s);
 }
+
+void *monitor_throughput(void *ctx)
+{
+    Monitor_ctx *monitor_ctx = (Monitor_ctx *)ctx;
+    int i;
+    size_t totalcount=0;
+    double speed;
+    
+    while(monitor_ctx->run)
+    {
+        for(i=0;i<monitor_ctx->threads;++i)
+        {
+            totalcount += monitor_ctx->thread_ctx[i].count;
+            monitor_ctx->thread_ctx[i].count = 0;
+        }
+        speed = 1.0*totalcount/1024/1024;
+        printf("\rspeed is %.2lfMB/s, %.2lfGbps", speed, speed*8/1024);
+        fflush(stdout); 
+        sleep(1);
+        totalcount=0;
+    }
+    return NULL;
+}

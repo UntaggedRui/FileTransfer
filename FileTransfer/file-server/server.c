@@ -22,13 +22,15 @@ void *thread_task(void *ctx)
 {
     Thread_ctx *thread_ctx = (Thread_ctx *)ctx;
     char buffer[BUF_SIZE];
-    int recv_count;
+    int recv_count, bytes_write;
     pin_1thread_to_1core(thread_ctx->coreid);
 
     lseek(thread_ctx->fileid, thread_ctx->start, SEEK_SET);
     while ((recv_count = read(thread_ctx->sockid, buffer, thread_ctx->packetsize)) > 0)
     {
-        write(thread_ctx->fileid, buffer, recv_count);
+        bytes_write = write(thread_ctx->fileid, buffer, recv_count);
+        // bytes_write = recv_count;
+        thread_ctx->count += bytes_write;
     }
     close(thread_ctx->sockid);
     close(thread_ctx->fileid);
@@ -81,6 +83,11 @@ void handle_connection_at_server(Para *para, int sockfd)
     char recv_filepath[256], filename[256];
     char tmp_path[512];
     size_t each_thread_size;
+    pthread_t monitor_thread;
+    Monitor_ctx monitor_ctx;
+
+
+
     read(sockfd, msg, 1024);
     // 接收到的是文件名:文件大小:线程数
     printf("msg is %s\n", msg);
@@ -99,6 +106,7 @@ void handle_connection_at_server(Para *para, int sockfd)
     each_thread_size = para->filesize / para->threads;
     for (i = 0; i < para->threads; i++)
     {
+        thread_ctx[i].count = 0;
         thread_ctx[i].sockid = accept(para->listen_fd, (struct sockaddr *)&cli_addr, &cli_len);
         thread_ctx[i].coreid = numa_core[para->numa][i];
         thread_ctx[i].packetsize = para->size;
@@ -111,10 +119,15 @@ void handle_connection_at_server(Para *para, int sockfd)
             exit(EXIT_FAILURE);
         }
     }
-
     // the last thread
-    printf("the last i is %d\n", i);
     thread_ctx[i - 1].end = para->filesize;
+
+    // for bandwidth monitor
+    monitor_ctx.thread_ctx = thread_ctx;
+    monitor_ctx.threads = para->threads;
+    monitor_ctx.run = 1;
+    pthread_create(&monitor_thread, NULL, monitor_throughput, (void *)&monitor_ctx);
+    
     for (i = 0; i < para->threads; ++i)
     {
         if (pthread_create(&thread_ctx[i].serv_thread, NULL, thread_task, (void *)&thread_ctx[i]) < 0)
@@ -126,8 +139,10 @@ void handle_connection_at_server(Para *para, int sockfd)
     {
         pthread_join(thread_ctx[i].serv_thread, NULL);
     }
-    free(thread_ctx);
+
+    monitor_ctx.run = 0;
     printf("%s get complete\n", para->filepath);
+    free(thread_ctx);
 }
 int main(int argc, char *argv[])
 {

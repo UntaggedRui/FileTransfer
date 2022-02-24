@@ -44,6 +44,8 @@ void *thread_task(void *ctx)
             send_ptr = buffer;
             while ((bytes_send = write(thread_ctx->sockid, buffer, bytes_read)) != 0)
             {
+                thread_ctx->count += bytes_send;
+                // printf("bytes_send is %d\n", bytes_send);
                 if ((bytes_send == -1) && (errno != EINTR))
                     break;
                 if (bytes_send == bytes_read)
@@ -70,6 +72,8 @@ void handle_connection_at_client(Para *para, int sockfd)
     int i;
     char msg[1024];
     size_t each_thread_size;
+    pthread_t monitor_thread;
+    Monitor_ctx monitor_ctx;
 
     para->filesize = getfilesize(para->filepath);
     sprintf(msg, "%zu:%d:%s", para->filesize, para->threads, para->filepath);
@@ -81,6 +85,7 @@ void handle_connection_at_client(Para *para, int sockfd)
     Thread_ctx *thread_ctx = (Thread_ctx *)malloc(para->threads * sizeof(Thread_ctx));
     for (i = 0; i < para->threads; ++i)
     {
+        thread_ctx[i].count = 0;
         thread_ctx[i].sockid = connect_server(para);
         thread_ctx[i].coreid = numa_core[para->numa][i];
         thread_ctx[i].packetsize = para->size;
@@ -93,10 +98,16 @@ void handle_connection_at_client(Para *para, int sockfd)
             exit(EXIT_FAILURE);
         }
     }
-
     // the last thread
-    printf("the last i is %d\n", i);
     thread_ctx[i - 1].end = para->filesize;
+
+    // for bandwidth monitor
+    monitor_ctx.thread_ctx = thread_ctx;
+    monitor_ctx.threads = para->threads;
+    monitor_ctx.run = 1;
+    pthread_create(&monitor_thread, NULL, monitor_throughput, (void *)&monitor_ctx);
+
+
     for (i = 0; i < para->threads; ++i)
     {
         if (pthread_create(&thread_ctx[i].serv_thread, NULL, thread_task, (void *)&thread_ctx[i]) < 0)
@@ -108,8 +119,9 @@ void handle_connection_at_client(Para *para, int sockfd)
     {
         pthread_join(thread_ctx[i].serv_thread, NULL);
     }
-    free(thread_ctx);
+    monitor_ctx.run = 0;
     printf("%s send complete\n", para->filepath);
+    free(thread_ctx);
 }
 int main(int argc, char *argv[])
 {
