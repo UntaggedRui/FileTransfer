@@ -10,7 +10,6 @@ int connect_server(Para *para)
         perror("create socket failed");
         exit(EXIT_FAILURE);
     }
-    // bzero((char *) &server_addr, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(para->port);
     if ((server = gethostbyname(para->address)) == NULL)
@@ -67,11 +66,11 @@ void *thread_task(void *ctx)
 }
 void handle_connection_at_client(Para *para, int sockfd)
 {
-    
+
     int i;
     char msg[1024];
     size_t each_thread_size;
-    
+
     para->filesize = getfilesize(para->filepath);
     sprintf(msg, "%zu:%d:%s", para->filesize, para->threads, para->filepath);
     printf("msg is %s\n", msg);
@@ -87,7 +86,7 @@ void handle_connection_at_client(Para *para, int sockfd)
         thread_ctx[i].packetsize = para->size;
         thread_ctx[i].start = i * each_thread_size;
         thread_ctx[i].end = thread_ctx[i].start + each_thread_size;
-        thread_ctx[i].fileid =  open(para->filepath, O_RDONLY);
+        thread_ctx[i].fileid = open(para->filepath, O_RDONLY);
         if (thread_ctx[i].fileid == 0)
         {
             printf("open file error\n");
@@ -115,11 +114,9 @@ void handle_connection_at_client(Para *para, int sockfd)
 int main(int argc, char *argv[])
 {
     Para paramters;
-    // Thread_ctx *thread_ctx;
 
     // read command line arguments
     parse_args(&paramters, argc, argv);
-    // thread_ctx = (Thread_ctx *)malloc(paramters.threads * sizeof(Thread_ctx));
 
     int socket_fd = connect_server(&paramters);
     handle_connection_at_client(&paramters, socket_fd);

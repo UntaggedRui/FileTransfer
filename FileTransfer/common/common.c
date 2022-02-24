@@ -1,4 +1,3 @@
-// parsing command line parameters
 #include "common.h"
 void usage(char *program)
 {
@@ -18,7 +17,7 @@ int parse_args(Para *para, int argc, char *argv[])
     para->size = 1024;
     para->port = 8877;
     para->threads = 1;
-    para-> numa = 0;
+    para->numa = 0;
     while (1)
     {
         int c;
@@ -76,13 +75,13 @@ int parse_args(Para *para, int argc, char *argv[])
     return 0;
 }
 
-__off_t getfilesize(char* filename)
+__off_t getfilesize(char *filename)
 {
     struct stat statbuf;
-    stat(filename,&statbuf);
+    stat(filename, &statbuf);
     return statbuf.st_size;
 }
-int setfilesize(int fd, __off_t size )
+int setfilesize(int fd, __off_t size)
 {
     return ftruncate(fd, size) == 0;
 }
@@ -102,12 +101,4 @@ void pin_1thread_to_1core(int core_id)
     // s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     // if (s != 0)
     //     fprintf(stderr, "pthread_getaffinity_np:%d", s);
-
-
-
-    
-    // printf("Set returned by pthread_getaffinity_np() contained:\n");
-    // for (j = 0; j < __CPU_SETSIZE; j++)
-    //     if (CPU_ISSET(j, &cpuset))
-    //         printf("    CPU %d\n", j);
 }

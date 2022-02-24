@@ -1,3 +1,5 @@
+先make
+
 server端运行
 
 ./bin/server  -a 0.0.0.0 -p 8888 -s 1024
