@@ -23,17 +23,19 @@ server端是一个后台程序。
 void *thread_task(void *ctx)
 {
     Thread_ctx *thread_ctx = (Thread_ctx *)ctx;
-    char buffer[BUF_SIZE];
+    char *buffer;
     int recv_count, bytes_write;
     pin_1thread_to_1core(thread_ctx->coreid);
 
     lseek(thread_ctx->fileid, thread_ctx->start, SEEK_SET);
+    buffer = (char *)malloc(sizeof(char)*thread_ctx->packetsize);
     while ((recv_count = read(thread_ctx->sockid, buffer, thread_ctx->packetsize)) > 0)
     {
         bytes_write = write(thread_ctx->fileid, buffer, recv_count);
         // bytes_write = recv_count;
         thread_ctx->count += bytes_write;
     }
+    free(buffer);
     close(thread_ctx->sockid);
     close(thread_ctx->fileid);
     return NULL;
@@ -97,7 +99,7 @@ void handle_connection_at_server(Para *para, int sockfd)
     read(sockfd, msg, 1024);
     // 接收到的是文件名:文件大小:线程数
     printf("msg is %s\n", msg);
-    sscanf(msg, "%zu:%d:%s", &para->filesize, &para->threads, recv_filepath);
+    sscanf(msg, "%zu:%u:%d:%s", &para->filesize, &para->size, &para->threads, recv_filepath);
     getfilename(recv_filepath, filename);
 
     printf("file path is %s, filename is %s, size is %zu, threads is %d\n", recv_filepath, filename, para->filesize, para->threads);

@@ -32,10 +32,11 @@ void *thread_task(void *ctx)
     Thread_ctx *thread_ctx = (Thread_ctx *)ctx;
     int bytes_read = 0;
     size_t start = thread_ctx->start;
-    char buffer[BUF_SIZE];
+    char *buffer;
     int bytes_send;
     char *send_ptr;
     pin_1thread_to_1core(thread_ctx->coreid);
+    buffer = (char *)malloc(sizeof(char)*thread_ctx->packetsize);
     lseek(thread_ctx->fileid, thread_ctx->start, SEEK_SET);
     while (start < thread_ctx->end)
     {
@@ -62,7 +63,7 @@ void *thread_task(void *ctx)
                 break;
         }
     }
-
+    free(buffer);
     close(thread_ctx->sockid);
     close(thread_ctx->fileid);
 
@@ -81,7 +82,7 @@ void handle_connection_at_client(Para *para, int sockfd)
     double avgspeed;
 
     para->filesize = getfilesize(para->filepath);
-    sprintf(msg, "%zu:%d:%s", para->filesize, para->threads, para->filepath);
+    sprintf(msg, "%zu:%u:%d:%s", para->filesize, para->size, para->threads, para->filepath);
     printf("msg is %s\n", msg);
     write(sockfd, msg, 1024); //发送文件名
     close(sockfd);

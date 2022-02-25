@@ -18,7 +18,6 @@
 
 #define DEFAULT_PORT 9091
 #define DEFAULT_PAYLOAD_SIZE 16
-#define BUF_SIZE 1024
 #define BASE_DIR "/nvme/"
 // #define BASE_DIR "/mnt/tmpfs/"
 
