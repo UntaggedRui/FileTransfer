@@ -1,4 +1,5 @@
 #include "common.h"
+
 void usage(char *program)
 {
     printf("Usage: \n");
@@ -88,6 +89,16 @@ int setfilesize(int fd, __off_t size)
 // each thread pins to one core
 void pin_1thread_to_1core(int core_id)
 {
+    cpu_set_t mask;  
+    //! sched_setaffinity  
+    CPU_ZERO(&mask);  
+    CPU_SET(core_id, &mask);  
+    if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) < 0) {  
+        printf("Error: cpu id %d sched_setaffinity\n", core_id);  
+        printf("Warning: performance may be impacted \n");  
+    }  
+    return;  
+
 
     // cpu_set_t cpuset;
     // pthread_t thread;

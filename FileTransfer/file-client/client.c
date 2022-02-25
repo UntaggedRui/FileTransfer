@@ -1,4 +1,6 @@
 #include "../common/common.h"
+static int numa_core[2][96] = {{0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94},
+                               {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95}};
 
 int connect_server(Para *para)
 {
@@ -74,6 +76,9 @@ void handle_connection_at_client(Para *para, int sockfd)
     size_t each_thread_size;
     pthread_t monitor_thread;
     Monitor_ctx monitor_ctx;
+    struct timeval start, end;
+    unsigned long timer;
+    double avgspeed;
 
     para->filesize = getfilesize(para->filepath);
     sprintf(msg, "%zu:%d:%s", para->filesize, para->threads, para->filepath);
@@ -107,7 +112,7 @@ void handle_connection_at_client(Para *para, int sockfd)
     monitor_ctx.run = 1;
     pthread_create(&monitor_thread, NULL, monitor_throughput, (void *)&monitor_ctx);
 
-
+    gettimeofday(&start, NULL);
     for (i = 0; i < para->threads; ++i)
     {
         if (pthread_create(&thread_ctx[i].serv_thread, NULL, thread_task, (void *)&thread_ctx[i]) < 0)
@@ -119,8 +124,13 @@ void handle_connection_at_client(Para *para, int sockfd)
     {
         pthread_join(thread_ctx[i].serv_thread, NULL);
     }
+    
+    gettimeofday(&end, NULL);
+
     monitor_ctx.run = 0;
-    printf("%s send complete\n", para->filepath);
+    timer = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
+    avgspeed = 1.0*para->filesize/1024/1024/(timer/1000000);
+    printf("\n%s send complete, avg speed is %.2lfMB/s, %.2lf Gbps\n", para->filepath, avgspeed, avgspeed*8/1024);
     free(thread_ctx);
 }
 int main(int argc, char *argv[])
